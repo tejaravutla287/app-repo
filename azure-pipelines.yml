@@ -53,14 +53,18 @@ stages:
         git config --global user.email "pipeline@azuredevops.com"
         git config --global user.name "Azure DevOps Pipeline"
         
-        # When using multi-checkout, Azure DevOps places repositories into folders matching their names
+        # Move into the checked out folder
         cd $(Build.SourcesDirectory)/gitops-repo/manifests
         
         # Update the image tag inside deployment.yaml dynamically
         sed -i "s|image: .*|image: $(acrName).azurecr.io/$(imageRepository):$(tag)|g" deployment.yaml
         
-        # Stage, commit, and push directly back to the main branch
+        # Stage and commit changes
         git add deployment.yaml
         git commit -m "Automated image tag update to $(tag) [skip ci]"
-        git push origin HEAD:main
+        
+        # OVERWRITE: Force git to push using your secret personal token (MAPPED_PAT)
+        git push https://$MAPPED_PAT@://github.com HEAD:main
       displayName: 'Update Kubernetes Manifests GitOps Repo'
+      env:
+        MAPPED_PAT: $(GH_PAT) # Securely maps your GH_PAT secret token from your library group
