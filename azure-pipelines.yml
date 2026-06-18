@@ -5,9 +5,13 @@ resources:
 - repo: self
 
 variables:
-  acrName: '' # Change this to your registry name
-  imageRepository: 'poc-app'
-  tag: '$(Build.BuildId)'
+  - group: New variable group 18-Jun # Change this to the exact name of your Library Group
+  - name: acrName
+    value: 'pocregistry3136'
+  - name: imageRepository
+    value: 'poc-app'
+  - name: tag
+    value: '$(Build.BuildId)'
 
 stages:
 - stage: BuildAndPush
