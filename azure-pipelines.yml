@@ -64,7 +64,7 @@ stages:
         git commit -m "Automated image tag update to $(tag) [skip ci]"
         
         # OVERWRITE: Force git to push using your secret personal token (MAPPED_PAT)
-        git push https://$MAPPED_PAT@://github.com HEAD:main
+        git push https://$MAPPED_PAT@github.com/tejaravutla287/gitops-repo.git HEAD:main
       displayName: 'Update Kubernetes Manifests GitOps Repo'
       env:
         MAPPED_PAT: $(GH_PAT) # Securely maps your GH_PAT secret token from your library group
