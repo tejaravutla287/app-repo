@@ -6,6 +6,10 @@ app.get('/', (req, res) => {
     res.send('<h1>Hello from Azure & ArgoCD POC!</h1>');
 });
 
+app.get('/greet', (req, res) => {
+    res.send('<h1>Hello DevOps Team !</h1>');
+});
+
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });
