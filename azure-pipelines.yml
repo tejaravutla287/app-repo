@@ -1,0 +1,48 @@
+trigger:
+- main
+
+resources:
+- repo: self
+
+variables:
+  acrName: '' # Change this to your registry name
+  imageRepository: 'poc-app'
+  tag: '$(Build.BuildId)'
+
+stages:
+- stage: BuildAndPush
+  displayName: Build and Push Stage
+  jobs:
+  - job: Build
+    displayName: Build Job
+    pool:
+      vmImage: 'ubuntu-latest'
+    steps:
+    # 1. Build and Push Docker Image to ACR
+    - task: Docker@2
+      displayName: Build and Push to ACR
+      inputs:
+        containerRegistry: 'poc-acr-connection' 
+        repository: $(imageRepository)
+        command: 'buildAndPush'
+        Dockerfile: '**/Dockerfile'
+        tags: |
+          $(tag)
+          latest
+
+    # 2. Update Manifests in the GitOps Repository
+    - script: |
+        git config --global user.email "pipeline@azuredevops.com"
+        git config --global user.name "Azure DevOps Pipeline"
+        
+        # Clone GitOps repo using the PAT secret variable
+        git clone https://$(GH_PAT)@://github.com
+        cd gitops-repo/manifests
+        
+        # Update image tag inside deployment.yaml dynamically
+        sed -i "s|image: .*|image: $(acrName).azurecr.io/$(imageRepository):$(tag)|g" deployment.yaml
+        
+        git add deployment.yaml
+        git commit -m "Automated image tag update to $(tag) [skip ci]"
+        git push origin main
+      displayName: 'Update Kubernetes Manifests GitOps Repo'
