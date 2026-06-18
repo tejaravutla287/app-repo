@@ -31,12 +31,14 @@ stages:
           latest
 
     # 2. Update Manifests in the GitOps Repository
+        # Update Manifests in the GitOps Repository
     - script: |
         git config --global user.email "pipeline@azuredevops.com"
         git config --global user.name "Azure DevOps Pipeline"
         
-        # Clone GitOps repo using the PAT secret variable
-        git clone https://$(GH_PAT)@://github.com
+        # We use $MAPPED_PAT here because we explicitly pass it below in the env block
+        git clone https://$MAPPED_PAT@://github.com
+        
         cd gitops-repo/manifests
         
         # Update image tag inside deployment.yaml dynamically
@@ -46,3 +48,5 @@ stages:
         git commit -m "Automated image tag update to $(tag) [skip ci]"
         git push origin main
       displayName: 'Update Kubernetes Manifests GitOps Repo'
+      env:
+        MAPPED_PAT: $(GH_PAT)  # This critical block securely injects your secret into the script environment
