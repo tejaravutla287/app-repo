@@ -1,11 +1,16 @@
 trigger:
 - main
 
+# 1. Declare the external GitOps repository resource so Azure DevOps can check it out natively
 resources:
-- repo: self
+  repositories:
+  - repository: gitops_repo_resource
+    type: github
+    name: tejaravutla287/gitops-repo
+    endpoint: github.com_tejaravutla287 # Replace this with the exact name of your GitHub Service Connection
 
 variables:
-  - group: New variable group 18-Jun # Change this to the exact name of your Library Group
+  - group: 'New variable group 18-Jun'
   - name: acrName
     value: 'pocregistry3136'
   - name: imageRepository
@@ -22,11 +27,15 @@ stages:
     pool:
       vmImage: 'ubuntu-latest'
     steps:
-    # 1. Build and Push Docker Image to ACR
+    # 2. Explicitly checkout the application repository (app-repo) first
+    - checkout: self
+      displayName: 'Checkout Application Code'
+
+    # 3. Build and Push Docker Image to ACR
     - task: Docker@2
       displayName: Build and Push to ACR
       inputs:
-        containerRegistry: 'poc-acr-connection' 
+        containerRegistry: 'poc-acr-connection'
         repository: $(imageRepository)
         command: 'buildAndPush'
         Dockerfile: '**/Dockerfile'
@@ -34,23 +43,24 @@ stages:
           $(tag)
           latest
 
-    # 2. Update Manifests in the GitOps Repository
-        # Update Manifests in the GitOps Repository
+    # 4. Native, secure checkout of your secondary GitOps repository
+    - checkout: gitops_repo_resource
+      displayName: 'Checkout GitOps Repo'
+      persistCredentials: true
+
+    # 5. Direct local manifest update and push back to GitHub
     - script: |
         git config --global user.email "pipeline@azuredevops.com"
         git config --global user.name "Azure DevOps Pipeline"
         
-        # We use $MAPPED_PAT here because we explicitly pass it below in the env block
-        git clone https://$MAPPED_PAT@://github.com
+        # When using multi-checkout, Azure DevOps places repositories into folders matching their names
+        cd $(Build.SourcesDirectory)/gitops-repo/manifests
         
-        cd gitops-repo/manifests
-        
-        # Update image tag inside deployment.yaml dynamically
+        # Update the image tag inside deployment.yaml dynamically
         sed -i "s|image: .*|image: $(acrName).azurecr.io/$(imageRepository):$(tag)|g" deployment.yaml
         
+        # Stage, commit, and push directly back to the main branch
         git add deployment.yaml
         git commit -m "Automated image tag update to $(tag) [skip ci]"
-        git push origin main
+        git push origin HEAD:main
       displayName: 'Update Kubernetes Manifests GitOps Repo'
-      env:
-        MAPPED_PAT: $(GH_PAT)  # This critical block securely injects your secret into the script environment
